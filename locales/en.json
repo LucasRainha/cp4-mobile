@@ -1,0 +1,11 @@
+{
+    "welcome":"Welcome to the app",
+    "logout":"Log out",
+    "deleteAccount":"Delete Account",
+    "confirmDelete":"Are you sure you want to delete yout account?",
+    "cancel":"Cancel",
+    "delete":"Delete",
+    "login":"Login",
+    "password":"Password"
+}
+

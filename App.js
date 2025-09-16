@@ -1,40 +1,25 @@
 // App.js
 import React, { useEffect, useState, useContext } from "react";
 import { NavigationContainer } from "@react-navigation/native";
-import { createDrawerNavigator } from "@react-navigation/drawer";
+import { createDrawerNavigator, DrawerContentScrollView, DrawerItemList } from "@react-navigation/drawer";
 import { createStackNavigator } from "@react-navigation/stack";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { signOut } from "firebase/auth";
-import { auth } from "./screens/../services/firebaseConfig"; 
+import { auth } from "./screens/../services/firebaseConfig";
+
 import LoginScreen from "./screens/LoginScreen";
 import RegisterScreen from "./screens/RegisterScreen";
 import DashboardScreen from "./screens/DashboardScreen";
-import CadastroMotoScreen from "./screens/CadastroMotoScreen";
-import RelatoriosScreen from "./screens/RelatoriosScreen";
 
 import { ThemeProvider, ThemeContext } from "./contexts/ThemeContext";
-
-import {
-  DrawerContentScrollView,
-  DrawerItemList,
-} from "@react-navigation/drawer";
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Switch,
-  Image,
-} from "react-native";
-
-
+import { View, Text, TouchableOpacity, StyleSheet, Switch, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 const Drawer = createDrawerNavigator();
 const Stack = createStackNavigator();
 
-
+/** ========= Drawer Custom ========= */
 function CustomDrawerContent(props) {
   const { usuario, onLogout, toggleTheme, theme } = props;
   const isDark = (theme?.background ?? "#000") !== "#fff";
@@ -42,10 +27,7 @@ function CustomDrawerContent(props) {
   return (
     <DrawerContentScrollView
       {...props}
-      contentContainerStyle={[
-        styles.drawerContainer,
-        { backgroundColor: theme.background },
-      ]}
+      contentContainerStyle={[styles.drawerContainer, { backgroundColor: theme.background }]}
     >
       {/* Cabeçalho com avatar e nome */}
       <View style={[styles.header, { backgroundColor: theme.inputBackground }]}>
@@ -62,9 +44,7 @@ function CustomDrawerContent(props) {
           <Text style={[styles.headerTitle, { color: theme.text }]}>
             {usuario?.displayName || "Bem-vindo!"}
           </Text>
-          <Text style={[styles.headerSubtitle, { color: theme.text }]}>
-            {usuario?.email}
-          </Text>
+          <Text style={[styles.headerSubtitle, { color: theme.text }]}>{usuario?.email}</Text>
         </View>
       </View>
 
@@ -122,7 +102,7 @@ function CustomDrawerContent(props) {
   );
 }
 
-/** =========== Drawer com ícones nas telas =========== */
+/** ========= Drawer (só Dashboard) ========= */
 function AppDrawer({ usuario, onLogout }) {
   const { theme, toggleTheme } = useContext(ThemeContext);
 
@@ -157,48 +137,25 @@ function AppDrawer({ usuario, onLogout }) {
           title: "Dashboard",
         }}
       />
-      <Drawer.Screen
-        name="Cadastro de Motos"
-        options={{
-          drawerIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="motorbike" size={size} color={color} />
-          ),
-        }}
-      >
-        {() => <CadastroMotoScreen userRM={usuario?.rm} />}
-      </Drawer.Screen>
-      <Drawer.Screen
-        name="Relatórios"
-        component={RelatoriosScreen}
-        options={{
-          drawerIcon: ({ color, size }) => (
-            <Ionicons name="stats-chart" size={size} color={color} />
-          ),
-        }}
-      />
     </Drawer.Navigator>
   );
 }
 
-/** =========== Auth Stack =========== */
+/** ========= Auth Stack (Login/Register) ========= */
 function AuthStack({ handleLoginSuccess }) {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Login">
-        {(props) => (
-          <LoginScreen {...props} onLoginSuccess={handleLoginSuccess} />
-        )}
+        {(props) => <LoginScreen {...props} onLoginSuccess={handleLoginSuccess} />}
       </Stack.Screen>
       <Stack.Screen name="Register">
-        {(props) => (
-          <RegisterScreen {...props} onRegisterSuccess={handleLoginSuccess} />
-        )}
+        {(props) => <RegisterScreen {...props} onRegisterSuccess={handleLoginSuccess} />}
       </Stack.Screen>
     </Stack.Navigator>
   );
 }
 
-/** =========== App Root =========== */
+/** ========= App Root ========= */
 export default function App() {
   const [usuario, setUsuario] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -251,11 +208,9 @@ export default function App() {
   );
 }
 
-
+/** ========= styles ========= */
 const styles = StyleSheet.create({
-  drawerContainer: {
-    flex: 1,
-  },
+  drawerContainer: { flex: 1 },
   header: {
     margin: 12,
     marginBottom: 8,
@@ -264,26 +219,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
   },
-  avatar: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    marginRight: 12,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 2,
-  },
-  headerSubtitle: {
-    fontSize: 13,
-    opacity: 0.8,
-  },
-  footer: {
-    paddingHorizontal: 12,
-    paddingBottom: 16,
-    gap: 10,
-  },
+  avatar: { width: 46, height: 46, borderRadius: 23, marginRight: 12 },
+  headerTitle: { fontSize: 16, fontWeight: "700", marginBottom: 2 },
+  headerSubtitle: { fontSize: 13, opacity: 0.8 },
+  footer: { paddingHorizontal: 12, paddingBottom: 16, gap: 10 },
   rowButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -292,12 +231,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
   },
-  rowLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  rowText: {
-    fontSize: 15,
-    fontWeight: "600",
-  },
+  rowLeft: { flexDirection: "row", alignItems: "center" },
+  rowText: { fontSize: 15, fontWeight: "600" },
 });

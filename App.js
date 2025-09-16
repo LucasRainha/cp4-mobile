@@ -16,6 +16,10 @@ import { View, Text, TouchableOpacity, StyleSheet, Switch, Image } from "react-n
 import { Ionicons } from "@expo/vector-icons";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
+// 👇 ADD: TanStack Query
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+const queryClient = new QueryClient();
+
 const Drawer = createDrawerNavigator();
 const Stack = createStackNavigator();
 
@@ -197,13 +201,15 @@ export default function App() {
 
   return (
     <ThemeProvider>
-      <NavigationContainer>
-        {usuario ? (
-          <AppDrawer usuario={usuario} onLogout={handleLogout} />
-        ) : (
-          <AuthStack handleLoginSuccess={handleLoginSuccess} />
-        )}
-      </NavigationContainer>
+      <QueryClientProvider client={queryClient}> {/* 👈 ENVOLVE O APP */}
+        <NavigationContainer>
+          {usuario ? (
+            <AppDrawer usuario={usuario} onLogout={handleLogout} />
+          ) : (
+            <AuthStack handleLoginSuccess={handleLoginSuccess} />
+          )}
+        </NavigationContainer>
+      </QueryClientProvider>
     </ThemeProvider>
   );
 }

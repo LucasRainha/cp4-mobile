@@ -36,7 +36,7 @@ export default function LoginScreen({ onLoginSuccess }) {
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>
       <Text style={[styles.logo, { color: theme.text }]}>
-        MOTI<Text style={{ color: theme.primary }}>X</Text>
+        Agend<Text style={{ color: theme.primary }}>a</Text>
       </Text>
 
       <View style={[styles.inputContainer, { backgroundColor: theme.inputBackground }]}>
@@ -77,7 +77,7 @@ export default function LoginScreen({ onLoginSuccess }) {
       </TouchableOpacity>
 
       <TouchableOpacity onPress={toggleTheme}>
-        <Text style={{ color: theme.text }}>Alternar Tema</Text>
+        <Text style={[styles.alterarTema, { color: theme.text }]}>Alternar Tema</Text>
       </TouchableOpacity>
     </View>
   );
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   logoHighlight: {
-    color: "#B6FF00",
+    color: "#27C8E3",
   },
   inputContainer: {
     flexDirection: "row",
@@ -130,5 +130,8 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 15,
     fontWeight: "bold",
+  },
+  alterarTema: {
+    
   },
 });

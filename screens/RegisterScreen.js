@@ -56,7 +56,7 @@ export default function RegisterScreen({ onRegisterSuccess }) {
       Alert.alert("Erro", error?.message || "Não foi possível cadastrar.");
     }
   };
-
+  
   const goToLogin = () => navigation.navigate("Login");
 
   return (
@@ -67,8 +67,8 @@ export default function RegisterScreen({ onRegisterSuccess }) {
         <Text style={[styles.backText, { color: theme.text }]}>Voltar</Text>
       </TouchableOpacity>
 
-      <Text style={[styles.logo, { color: theme.text }]}>
-        MOTI<Text style={{ color: theme.primary }}>X</Text> - Cadastro
+      <Text style={[styles.logo, { color: theme.primary }]}>
+        A<Text style={{ color:  theme.text }}>genda</Text> - Cadastro
       </Text>
 
       <View style={[styles.inputContainer, { backgroundColor: theme.inputBackground }]}>

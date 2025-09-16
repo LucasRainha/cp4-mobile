@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useContext, useCallback, useMemo } from "react";
+// screens/DashboardScreen.js
+import React, { useEffect, useState, useContext, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,199 +7,265 @@ import {
   FlatList,
   RefreshControl,
   TouchableOpacity,
+  TextInput,
+  Alert,
+  Platform,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useFocusEffect } from "@react-navigation/native";
 import { ThemeContext } from "../contexts/ThemeContext";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import DateTimePicker from "@react-native-community/datetimepicker";
 
-// mapa de setores (mesmas quantidades do resto do app)
-const VAGAS_MAP = {
-  A: Array.from({ length: 9 }, (_, i) => `A${i + 1}`),
-  B: Array.from({ length: 9 }, (_, i) => `B${i + 1}`),
-  C: Array.from({ length: 9 }, (_, i) => `C${i + 1}`),
-  D: Array.from({ length: 9 }, (_, i) => `D${i + 1}`),
-};
+import { auth, db } from "../services/firebaseConfig";
+import {
+  collection,
+  query,
+  orderBy,
+  onSnapshot,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  serverTimestamp,
+} from "firebase/firestore";
+
+import { useQuery } from "@tanstack/react-query";
+import { ensurePermissions, scheduleAtDate } from "../services/notifications";
+
+/** ========= API externa (TanStack Query) ========= */
+async function fetchQuote() {
+  const r = await fetch("https://zenquotes.io/api/random");
+  const data = await r.json();
+  const item = Array.isArray(data) ? data[0] : data;
+  return { q: item.q || "Keep going!", a: item.a || "Unknown" };
+}
 
 export default function DashboardScreen() {
   const { theme } = useContext(ThemeContext);
+  const user = auth.currentUser;
 
-  const [motos, setMotos] = useState([]);
-  const [setor, setSetor] = useState("A");
+  const [tasks, setTasks] = useState([]);
+  const [newTitle, setNewTitle] = useState("");
+
+  // NEW: due date para a task + controle do picker
+  const [dueDate, setDueDate] = useState(null); // Date | null
+  const [pickerVisible, setPickerVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState(null);
 
-  const vagasSetor = useMemo(() => VAGAS_MAP[setor] || [], [setor]);
+  // Frase motivacional (atualiza a cada 30 min; cacheia)
+  const { data: quote, refetch: refetchQuote } = useQuery({
+    queryKey: ["quote"],
+    queryFn: fetchQuote,
+    staleTime: 1000 * 60 * 30,
+  });
 
-  const carregar = useCallback(async () => {
+  /** ========= Firestore: users/{uid}/tasks (tempo real) ========= */
+  const listenTasks = useCallback(() => {
+    if (!user?.uid) return () => {};
+    const col = collection(db, "users", user.uid, "tasks");
+    const q = query(col, orderBy("createdAt", "desc"));
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() || {}) }));
+        setTasks(list);
+      },
+      (err) => {
+        console.log("onSnapshot error:", err?.code, err?.message);
+      }
+    );
+    return unsub;
+  }, [user?.uid]);
+
+  useEffect(() => {
+    const unsub = listenTasks();
+    return () => unsub && unsub();
+  }, [listenTasks]);
+
+  /** ========= Helpers ========= */
+  const isFuture = (d) => d instanceof Date && !isNaN(d) && d.getTime() > Date.now();
+  const fmtDateTime = (msOrDate) => {
+    const d = msOrDate instanceof Date ? msOrDate : new Date(msOrDate);
+    if (isNaN(d)) return "";
+    return d.toLocaleString();
+  };
+
+  /** ========= Actions ========= */
+  const addTask = async () => {
+    const title = newTitle.trim();
+    if (!title || !user?.uid) return;
+
+    // salva dueAt (ms) junto com a task
+    const col = collection(db, "users", user.uid, "tasks");
+    const dueMs = dueDate ? dueDate.getTime() : null;
+
+    await addDoc(col, {
+      title,
+      done: false,
+      createdAt: serverTimestamp(),
+      dueAt: dueMs, // 👈 gravado no Firestore
+    });
+
+    // agenda notificação para a data se for futura
     try {
-      const dados = await AsyncStorage.getItem("motos");
-      const lista = dados ? JSON.parse(dados) : [];
-      setMotos(lista);
-      setLastUpdated(new Date());
+      if (isFuture(dueDate)) {
+        const ok = await ensurePermissions();
+        if (ok) {
+          await scheduleAtDate("Lembrete", `Revisar: “${title}”`, dueDate);
+        }
+      }
     } catch (e) {
-      // falha silenciosa; poderia exibir toast/alert
+      console.log("Falha ao agendar notificação:", e?.message || e);
+    }
+
+    setNewTitle("");
+    setDueDate(null);
+  };
+
+  const toggleTask = async (task) => {
+    if (!user?.uid || !task?.id) return;
+    const ref = doc(db, "users", user.uid, "tasks", task.id);
+    await updateDoc(ref, { done: !task.done });
+  };
+
+  const removeTask = async (task) => {
+    if (!user?.uid || !task?.id) return;
+    const ref = doc(db, "users", user.uid, "tasks", task.id);
+    await deleteDoc(ref);
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refetchQuote();
     } finally {
       setRefreshing(false);
     }
-  }, []);
-
-  useEffect(() => {
-    carregar();
-  }, [carregar]);
-
-  useFocusEffect(
-    useCallback(() => {
-      // recarrega sempre que a tela ganhar foco
-      carregar();
-    }, [carregar])
-  );
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    carregar();
   };
 
-  // status por vaga no setor atual
-  const getStatusVaga = (vaga) => {
-    // encontra um registro para essa vaga; se você passar a registrar Saída, pode pegar o último por data
-    const moto = motos.find((m) => m.vaga === vaga && (m?.tipo || "Entrada").toLowerCase() === "entrada");
-    if (!moto) return "empty";
-    if (!moto.placa || moto.placa.trim() === "") return "noplate";
-    return "occupied";
-  };
-
-  // métricas (no setor atual)
-  const totalMotosSetor = motos.filter((m) => (m.vaga || "").startsWith(setor)).length;
-  const semPlacaSetor = motos.filter(
-    (m) => (m.vaga || "").startsWith(setor) && (!m.placa || m.placa.trim() === "")
-  ).length;
-  const vagasDisponiveis = vagasSetor.filter((v) => !motos.some((m) => m.vaga === v && (m?.tipo || "Entrada").toLowerCase() === "entrada")).length;
-
-  // UI Components
+  /** ========= UI ========= */
   const Header = () => (
     <View style={styles(theme).header}>
       <View style={styles(theme).headerLeft}>
-        <Ionicons name="speedometer" size={22} color={theme.primary} />
-        <Text style={styles(theme).title}>Dashboard</Text>
+        <Ionicons name="checkmark-done-circle" size={22} color={theme.primary} />
+        <Text style={styles(theme).title}>Minhas Tarefas</Text>
       </View>
-      <Text style={styles(theme).subtitle}>Visão geral de ocupação</Text>
-      {lastUpdated && (
-        <Text style={styles(theme).lastUpdated}>
-          Atualizado: {lastUpdated.toLocaleTimeString()}
+      {quote ? (
+        <Text style={styles(theme).subtitle}>
+          “{quote.q}” — {quote.a}
         </Text>
+      ) : (
+        <Text style={styles(theme).subtitle}>Carregando inspiração…</Text>
       )}
     </View>
   );
 
-  const SectorTabs = () => (
-    <View style={styles(theme).tabs}>
-      {["A", "B", "C", "D"].map((s) => {
-        const active = setor === s;
-        return (
-          <TouchableOpacity
-            key={s}
-            onPress={() => setSetor(s)}
-            style={[
-              styles(theme).tab,
-              active && { backgroundColor: theme.primary, borderColor: theme.primary },
-            ]}
-          >
-            <Text style={[styles(theme).tabText, active && { color: theme.background, fontWeight: "800" }]}>
-              Setor {s}
-            </Text>
-          </TouchableOpacity>
-        );
-      })}
+  const TaskItem = ({ item }) => (
+    <View style={styles(theme).taskItem}>
+      <TouchableOpacity
+        onPress={() => toggleTask(item)}
+        style={styles(theme).checkButton}
+        accessibilityLabel={item.done ? "Marcar como pendente" : "Marcar como concluída"}
+      >
+        {item.done ? (
+          <Ionicons name="checkbox" size={22} color={theme.primary} />
+        ) : (
+          <Ionicons name="square-outline" size={22} color={theme.text + "99"} />
+        )}
+      </TouchableOpacity>
+
+      <View style={{ flex: 1 }}>
+        <Text
+          style={[
+            styles(theme).taskTitle,
+            item.done && { textDecorationLine: "line-through", opacity: 0.6 },
+          ]}
+          numberOfLines={2}
+        >
+          {item.title}
+        </Text>
+        {item.dueAt ? (
+          <Text style={styles(theme).dueText}>⏰ {fmtDateTime(item.dueAt)}</Text>
+        ) : null}
+      </View>
+
+      <TouchableOpacity onPress={() => removeTask(item)} style={styles(theme).trashButton}>
+        <MaterialCommunityIcons name="trash-can-outline" size={20} color="#F44336" />
+      </TouchableOpacity>
     </View>
   );
-
-  const StatCard = ({ icon, label, value, accent = theme.text }) => (
-    <View style={styles(theme).statCard}>
-      <View style={styles(theme).statLeft}>
-        {icon}
-        <Text style={styles(theme).statLabel}>{label}</Text>
-      </View>
-      <Text style={[styles(theme).statValue, { color: accent }]}>{value}</Text>
-    </View>
-  );
-
-  const Legend = () => (
-    <View style={styles(theme).legendRow}>
-      <View style={styles(theme).legendItem}>
-        <View style={[styles(theme).legendDot, { backgroundColor: "#4CAF50" }]} />
-        <Text style={styles(theme).legendText}>Livre</Text>
-      </View>
-      <View style={styles(theme).legendItem}>
-        <View style={[styles(theme).legendDot, { backgroundColor: "#9E9E9E" }]} />
-        <Text style={styles(theme).legendText}>Ocupada</Text>
-      </View>
-      <View style={styles(theme).legendItem}>
-        <View style={[styles(theme).legendDot, { backgroundColor: "#F44336" }]} />
-        <Text style={styles(theme).legendText}>Sem placa</Text>
-      </View>
-    </View>
-  );
-
-  const Vaga = ({ vaga }) => {
-    const status = getStatusVaga(vaga);
-    let color = "#4CAF50"; // livre
-    if (status === "occupied") color = "#9E9E9E";
-    if (status === "noplate") color = "#F44336";
-
-    return (
-      <View style={[styles(theme).vaga, { backgroundColor: color }]}>
-        <Text style={styles(theme).vagaText}>{vaga}</Text>
-      </View>
-    );
-  };
 
   return (
     <View style={styles(theme).container}>
       <Header />
-      <SectorTabs />
 
-      {/* Cards de métricas */}
-      <View style={styles(theme).statsGrid}>
-        <StatCard
-          icon={<Ionicons name="bicycle" size={18} color={theme.primary} />}
-          label={`Motos no setor ${setor}`}
-          value={totalMotosSetor}
-          accent={theme.text}
+      {/* Input de nova tarefa + seletor de data */}
+      <View style={styles(theme).inputRow}>
+        <Ionicons name="add-circle" size={22} color={theme.primary} />
+        <TextInput
+          style={styles(theme).input}
+          placeholder="O que precisa fazer?"
+          placeholderTextColor={theme.text + "66"}
+          value={newTitle}
+          onChangeText={setNewTitle}
+          onSubmitEditing={addTask}
+          returnKeyType="done"
         />
-        <StatCard
-          icon={<MaterialCommunityIcons name="identifier" size={18} color="#F44336" />}
-          label="Sem placa"
-          value={semPlacaSetor}
-          accent="#F44336"
-        />
-        <StatCard
-          icon={<Ionicons name="checkmark-done" size={18} color="#4CAF50" />}
-          label="Vagas livres"
-          value={vagasDisponiveis}
-          accent="#4CAF50"
-        />
+
+        {/* Botão abre o DateTimePicker */}
+        <TouchableOpacity
+          onPress={() => setPickerVisible(true)}
+          style={styles(theme).dateBtn}
+        >
+          <Ionicons name="calendar-outline" size={18} color="#fff" />
+          <Text style={styles(theme).dateBtnTxt}>
+            {dueDate ? new Date(dueDate).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Data"}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={addTask} style={styles(theme).addButton}>
+          <Text style={styles(theme).addButtonText}>Adicionar</Text>
+        </TouchableOpacity>
       </View>
 
-      <Legend />
+      {/* Mostra data escolhida (opcional) */}
+      {dueDate ? (
+        <Text style={styles(theme).dueInline}>⏰ {fmtDateTime(dueDate)}</Text>
+      ) : null}
 
-      {/* Grade de vagas */}
+      {/* DateTimePicker nativo */}
+      {pickerVisible && (
+        <DateTimePicker
+          value={dueDate || new Date(Date.now() + 5 * 60 * 1000)}
+          mode="datetime"
+          display={Platform.OS === "ios" ? "inline" : "default"}
+          onChange={(event, selected) => {
+            if (Platform.OS !== "ios") setPickerVisible(false);
+            if (selected) setDueDate(selected);
+          }}
+          // em iOS você pode manter visível e usar um botão OK externo se preferir
+        />
+      )}
+
+      {/* Métricas rápidas */}
+      <View style={styles(theme).statsRow}>
+        <Stat label="Pendentes" value={tasks.filter((t) => !t.done).length} theme={theme} />
+        <Stat label="Concluídas" value={tasks.filter((t) => t.done).length} theme={theme} />
+        <Stat label="Total" value={tasks.length} theme={theme} />
+      </View>
+
+      {/* Lista em tempo real */}
       <FlatList
-        data={vagasSetor}
-        numColumns={3}
-        keyExtractor={(item) => item}
-        columnWrapperStyle={{ gap: 10 }}
-        contentContainerStyle={{ paddingVertical: 10, paddingBottom: 24 }}
-        renderItem={({ item }) => <Vaga vaga={item} />}
+        data={tasks}
+        keyExtractor={(item) => item.id}
+        renderItem={TaskItem}
+        contentContainerStyle={{ paddingBottom: 24 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.primary} />
         }
-        ListFooterComponent={
-          <View style={styles(theme).footerHint}>
-            <Ionicons name="information-circle-outline" size={16} color={theme.text + "88"} />
-            <Text style={styles(theme).footerHintText}>
-              A ocupação considera entradas registradas. Se você registrar “Saída”, ajuste a lógica para considerar o último evento por vaga.
-            </Text>
+        ListEmptyComponent={
+          <View style={styles(theme).emptyBox}>
+            <Ionicons name="list-outline" size={22} color={theme.text + "66"} />
+            <Text style={styles(theme).emptyText}>Sem tarefas ainda. Adicione a primeira!</Text>
           </View>
         }
       />
@@ -206,132 +273,89 @@ export default function DashboardScreen() {
   );
 }
 
+/** ========= Pequeno card de estatística ========= */
+function Stat({ label, value, theme }) {
+  return (
+    <View style={styles(theme).statCard}>
+      <Text style={styles(theme).statLabel}>{label}</Text>
+      <Text style={styles(theme).statValue}>{value}</Text>
+    </View>
+  );
+}
+
+/** ========= styles ========= */
 const styles = (theme) =>
   StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: theme.background,
-      padding: 16,
-    },
-    header: {
-      marginBottom: 8,
-    },
-    headerLeft: {
+    container: { flex: 1, backgroundColor: theme.background, padding: 16 },
+    header: { marginBottom: 12 },
+    headerLeft: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 },
+    title: { fontSize: 22, fontWeight: "800", color: theme.text },
+    subtitle: { color: theme.text + "99" },
+
+    inputRow: {
       flexDirection: "row",
       alignItems: "center",
       gap: 8,
-      marginBottom: 6,
-    },
-    title: {
-      fontSize: 24,
-      fontWeight: "800",
-      color: theme.text,
-    },
-    subtitle: {
-      color: theme.text + "99",
-      marginBottom: 4,
-    },
-    lastUpdated: {
-      color: theme.text + "66",
-      fontSize: 12,
-    },
-
-    tabs: {
-      flexDirection: "row",
-      gap: 8,
-      marginVertical: 12,
-    },
-    tab: {
-      paddingVertical: 8,
-      paddingHorizontal: 14,
-      borderRadius: 999,
-      backgroundColor: theme.inputBackground,
-      borderWidth: 1,
-      borderColor: theme.text + "22",
-    },
-    tabText: {
-      color: theme.text,
-      fontWeight: "600",
-      fontSize: 12,
-      letterSpacing: 0.2,
-    },
-
-    statsGrid: {
-      gap: 10,
-      marginBottom: 8,
-    },
-    statCard: {
       backgroundColor: theme.inputBackground,
       borderRadius: 14,
-      paddingVertical: 12,
-      paddingHorizontal: 14,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
       borderWidth: 1,
       borderColor: theme.text + "10",
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
+      marginBottom: 6,
     },
-    statLeft: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 8,
-    },
-    statLabel: {
-      color: theme.text,
-      fontWeight: "600",
-    },
-    statValue: {
-      fontWeight: "900",
-      fontSize: 18,
-      letterSpacing: 0.3,
-    },
+    input: { flex: 1, color: theme.text, paddingVertical: 6 },
 
-    legendRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 16,
-      marginTop: 8,
-      marginBottom: 4,
-    },
-    legendItem: {
+    dateBtn: {
       flexDirection: "row",
       alignItems: "center",
       gap: 6,
+      backgroundColor: theme.primary,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      borderRadius: 10,
     },
-    legendDot: {
-      width: 12,
-      height: 12,
-      borderRadius: 6,
-    },
-    legendText: {
-      color: theme.text,
-      fontSize: 12,
-    },
+    dateBtnTxt: { color: "#fff", fontWeight: "800", fontSize: 12 },
 
-    vaga: {
+    addButton: {
+      backgroundColor: theme.primary,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 10,
+    },
+    addButtonText: { color: "#fff", fontWeight: "700", fontSize: 12, letterSpacing: 0.3 },
+
+    dueInline: { color: theme.text + "99", marginBottom: 10 },
+
+    statsRow: { flexDirection: "row", gap: 8, marginBottom: 8 },
+    statCard: {
       flex: 1,
-      minWidth: 90,
-      height: 56,
+      backgroundColor: theme.inputBackground,
       borderRadius: 12,
-      justifyContent: "center",
-      alignItems: "center",
-      marginBottom: 10,
+      padding: 12,
+      borderWidth: 1,
+      borderColor: theme.text + "10",
     },
-    vagaText: {
-      color: "#ffffff",
-      fontWeight: "800",
-      letterSpacing: 0.3,
-    },
+    statLabel: { color: theme.text + "88", fontSize: 12, marginBottom: 2 },
+    statValue: { color: theme.text, fontSize: 18, fontWeight: "900" },
 
-    footerHint: {
+    taskItem: {
       flexDirection: "row",
       alignItems: "center",
-      gap: 6,
-      marginTop: 6,
+      backgroundColor: theme.inputBackground,
+      borderRadius: 14,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderWidth: 1,
+      borderColor: theme.text + "10",
+      marginBottom: 8,
+      gap: 10,
     },
-    footerHintText: {
-      color: theme.text + "88",
-      fontSize: 12,
-      flex: 1,
-    },
+    checkButton: { padding: 2 },
+    taskTitle: { color: theme.text, fontSize: 15, fontWeight: "600" },
+    dueText: { color: theme.text + "88", fontSize: 12, marginTop: 2 },
+    trashButton: { padding: 4 },
+
+    emptyBox: { alignItems: "center", gap: 6, paddingVertical: 24 },
+    emptyText: { color: theme.text + "88" },
   });

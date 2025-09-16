@@ -1,6 +1,10 @@
 // src/services/firebaseConfig.js
 import { initializeApp } from "firebase/app";
-import { initializeAuth, getReactNativePersistence } from "firebase/auth";
+import {
+  initializeAuth,
+  getReactNativePersistence,
+} from "firebase/auth";
+import { getFirestore } from "firebase/firestore"; // 👈 importar firestore
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const firebaseConfig = {
@@ -15,9 +19,12 @@ const firebaseConfig = {
 
 export const app = initializeApp(firebaseConfig);
 
-// ✅ Importante no React Native: initializeAuth + persistência nativa
+// ✅ Auth com persistência nativa
 export const auth = initializeAuth(app, {
   persistence: getReactNativePersistence(AsyncStorage),
 });
+
+// ✅ Firestore (para salvar/ler tarefas em tempo real)
+export const db = getFirestore(app);
 
 // ❌ Não use getAnalytics no mobile

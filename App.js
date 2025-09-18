@@ -1,5 +1,5 @@
 // App.js
-import "./services/i18n"; // 👈 Corrigido
+import "./services/i18n"; 
 import React, { useEffect, useState, useContext } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import {
@@ -28,11 +28,10 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-// 👇 ADD: TanStack Query
+//  TanStack Query
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useTranslation } from "react-i18next"; // 👈 Ajustado
-import i18n from "./services/i18n"; // 👈 Ajustado
-
+import { useTranslation } from "react-i18next"; 
+import i18n from "./services/i18n"; 
 const queryClient = new QueryClient();
 const Drawer = createDrawerNavigator();
 const Stack = createStackNavigator();
@@ -98,7 +97,7 @@ function CustomDrawerContent(props) {
         >
           <View style={styles.rowLeft}>
             <Ionicons
-              name={isDark ? "moon" : "sunny"} // 🌙 ou ☀️
+              name={isDark ? "moon" : "sunny"} 
               size={22}
               color={theme.primary}
               style={{ marginRight: 10 }}

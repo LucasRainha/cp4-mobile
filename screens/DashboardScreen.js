@@ -1,4 +1,4 @@
-// screens/DashboardScreen.js
+
 import React, { useEffect, useState, useContext, useCallback } from "react";
 import {
   View,
@@ -104,7 +104,7 @@ export default function DashboardScreen() {
       title,
       done: false,
       createdAt: serverTimestamp(),
-      dueAt: dueMs, // 👈 gravado no Firestore
+      dueAt: dueMs, 
     });
 
     // agenda notificação para a data se for futura

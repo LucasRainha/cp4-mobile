@@ -40,18 +40,13 @@ export default function RegisterScreen({ onRegisterSuccess }) {
       const user = userCredential.user;
       console.log("Cadastro bem-sucedido:", user.uid);
 
-      // ✅ Deixa o Root (App.js) alternar de AuthStack -> Drawer automaticamente
+    
       onRegisterSuccess && onRegisterSuccess({
         uid: user.uid,
         email: user.email,
       });
 
-      // ❌ NÃO navegue manualmente daqui (essa tela está no AuthStack)
-      // navigation.navigate("Dashboard");
-      // navigation.replace("Dashboard");
-
-      // (Opcional) feedback:
-      // Alert.alert("Sucesso", "Conta criada! Abrindo o app...");
+     
 
     } catch (error) {
       console.error("Erro no cadastro:", error);

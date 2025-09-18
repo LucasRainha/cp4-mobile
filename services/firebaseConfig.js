@@ -1,11 +1,16 @@
 // src/services/firebaseConfig.js
+
 import { initializeApp } from "firebase/app";
-import {
-  initializeAuth,
-  getReactNativePersistence,
-} from "firebase/auth";
-import { getFirestore } from "firebase/firestore"; // 👈 importar firestore
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getFirestore } from "firebase/firestore";
+import { getAuth, initializeAuth, getReactNativePersistence } from "firebase/auth";
+// Detecta ambiente web
+const isWeb = typeof window !== "undefined" && typeof window.document !== "undefined";
+
+// Só importa AsyncStorage se não for web
+let AsyncStorage;
+if (!isWeb) {
+  AsyncStorage = require("@react-native-async-storage/async-storage").default;
+}
 
 const firebaseConfig = {
   apiKey: "AIzaSyCoIqo1CPjTBHmwgK2RlPmD6Lhy3RpNWsw",
@@ -17,14 +22,14 @@ const firebaseConfig = {
   measurementId: "G-8DDYQT1YFV",
 };
 
+
 export const app = initializeApp(firebaseConfig);
 
-// ✅ Auth com persistência nativa
-export const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage),
-});
+// Inicializa Auth corretamente para cada ambiente
+export const auth = isWeb
+  ? getAuth(app)
+  : initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    });
 
-// ✅ Firestore (para salvar/ler tarefas em tempo real)
 export const db = getFirestore(app);
-
-// ❌ Não use getAnalytics no mobile

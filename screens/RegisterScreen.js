@@ -1,4 +1,5 @@
 import React, { useState, useContext } from "react";
+import { useTranslation } from "react-i18next";
 import {
   View,
   Text,
@@ -14,6 +15,7 @@ import { useNavigation } from "@react-navigation/native";
 import { ThemeContext } from "../contexts/ThemeContext";
 
 export default function RegisterScreen({ onRegisterSuccess }) {
+  const { t } = useTranslation();
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [confirmSenha, setConfirmSenha] = useState("");
@@ -25,7 +27,7 @@ export default function RegisterScreen({ onRegisterSuccess }) {
     console.log("Tentando cadastro com:", email);
 
     if (senha !== confirmSenha) {
-      Alert.alert("Erro", "As senhas não coincidem.");
+      Alert.alert(t("error", "Erro"), t("passwordsDoNotMatch", "As senhas não coincidem."));
       return;
     }
 
@@ -53,28 +55,28 @@ export default function RegisterScreen({ onRegisterSuccess }) {
 
     } catch (error) {
       console.error("Erro no cadastro:", error);
-      Alert.alert("Erro", error?.message || "Não foi possível cadastrar.");
+      Alert.alert(t("error", "Erro"), error?.message || t("registerFailed", "Não foi possível cadastrar."));
     }
   };
   
   const goToLogin = () => navigation.navigate("Login");
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.background }]}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}> 
       {/* Botão para voltar ao Login */}
       <TouchableOpacity style={styles.backBtn} onPress={goToLogin}>
         <Ionicons name="arrow-back" size={22} color={theme.text} />
-        <Text style={[styles.backText, { color: theme.text }]}>Voltar</Text>
+        <Text style={[styles.backText, { color: theme.text }]}>{t("back", "Voltar")}</Text>
       </TouchableOpacity>
 
-      <Text style={[styles.logo, { color: theme.primary }]}>
-        A<Text style={{ color:  theme.text }}>genda</Text> - Cadastro
+      <Text style={[styles.logo, { color: theme.primary }]}> 
+        {t("appNameHighlight", "A")}<Text style={{ color:  theme.text }}>{t("appName", "genda")}</Text> - {t("register", "Cadastro")}
       </Text>
 
-      <View style={[styles.inputContainer, { backgroundColor: theme.inputBackground }]}>
+      <View style={[styles.inputContainer, { backgroundColor: theme.inputBackground }]}> 
         <Ionicons name="mail-outline" size={20} color={theme.text} style={styles.icon} />
         <TextInput
-          placeholder="Email"
+          placeholder={t("email", "Email")}
           style={[styles.input, { color: theme.text }]}
           placeholderTextColor={theme.text}
           value={email}
@@ -84,10 +86,10 @@ export default function RegisterScreen({ onRegisterSuccess }) {
         />
       </View>
 
-      <View style={[styles.inputContainer, { backgroundColor: theme.inputBackground }]}>
+      <View style={[styles.inputContainer, { backgroundColor: theme.inputBackground }]}> 
         <Ionicons name="lock-closed-outline" size={20} color={theme.text} style={styles.icon} />
         <TextInput
-          placeholder="Senha"
+          placeholder={t("password", "Senha")}
           style={[styles.input, { color: theme.text }]}
           placeholderTextColor={theme.text}
           secureTextEntry
@@ -96,10 +98,10 @@ export default function RegisterScreen({ onRegisterSuccess }) {
         />
       </View>
 
-      <View style={[styles.inputContainer, { backgroundColor: theme.inputBackground }]}>
+      <View style={[styles.inputContainer, { backgroundColor: theme.inputBackground }]}> 
         <Ionicons name="lock-closed-outline" size={20} color={theme.text} style={styles.icon} />
         <TextInput
-          placeholder="Confirmar Senha"
+          placeholder={t("confirmPassword", "Confirmar Senha")}
           style={[styles.input, { color: theme.text }]}
           placeholderTextColor={theme.text}
           secureTextEntry
@@ -112,7 +114,7 @@ export default function RegisterScreen({ onRegisterSuccess }) {
         style={[styles.button, { backgroundColor: theme.primary }]}
         onPress={handleRegister}
       >
-        <Text style={[styles.buttonText, { color: theme.background }]}>Cadastrar</Text>
+        <Text style={[styles.buttonText, { color: theme.background }]}>{t("register", "Cadastrar")}</Text>
       </TouchableOpacity>
     </View>
   );

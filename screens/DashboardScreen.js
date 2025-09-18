@@ -11,6 +11,7 @@ import {
   Alert,
   Platform,
 } from "react-native";
+import { useTranslation } from "react-i18next";
 import { ThemeContext } from "../contexts/ThemeContext";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import DateTimePicker from "@react-native-community/datetimepicker";
@@ -42,6 +43,7 @@ async function fetchQuote() {
 export default function DashboardScreen() {
   const { theme } = useContext(ThemeContext);
   const user = auth.currentUser;
+  const { t } = useTranslation();
 
   const [tasks, setTasks] = useState([]);
   const [newTitle, setNewTitle] = useState("");
@@ -147,7 +149,7 @@ export default function DashboardScreen() {
     <View style={styles(theme).header}>
       <View style={styles(theme).headerLeft}>
         <Ionicons name="checkmark-done-circle" size={22} color={theme.primary} />
-        <Text style={styles(theme).title}>Minhas Tarefas</Text>
+  <Text style={styles(theme).title}>{t("myTasks", "Minhas Tarefas")}</Text>
       </View>
       {quote ? (
         <Text style={styles(theme).subtitle}>
@@ -164,7 +166,7 @@ export default function DashboardScreen() {
       <TouchableOpacity
         onPress={() => toggleTask(item)}
         style={styles(theme).checkButton}
-        accessibilityLabel={item.done ? "Marcar como pendente" : "Marcar como concluída"}
+  accessibilityLabel={item.done ? t("markAsPending", "Marcar como pendente") : t("markAsDone", "Marcar como concluída")}
       >
         {item.done ? (
           <Ionicons name="checkbox" size={22} color={theme.primary} />
@@ -203,7 +205,7 @@ export default function DashboardScreen() {
         <Ionicons name="add-circle" size={22} color={theme.primary} />
         <TextInput
           style={styles(theme).input}
-          placeholder="O que precisa fazer?"
+          placeholder={t("whatToDo", "O que precisa fazer?")}
           placeholderTextColor={theme.text + "66"}
           value={newTitle}
           onChangeText={setNewTitle}
@@ -218,12 +220,12 @@ export default function DashboardScreen() {
         >
           <Ionicons name="calendar-outline" size={18} color="#fff" />
           <Text style={styles(theme).dateBtnTxt}>
-            {dueDate ? new Date(dueDate).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Data"}
+            {dueDate ? new Date(dueDate).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : t("date", "Data")}
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity onPress={addTask} style={styles(theme).addButton}>
-          <Text style={styles(theme).addButtonText}>Adicionar</Text>
+          <Text style={styles(theme).addButtonText}>{t("add", "Adicionar")}</Text>
         </TouchableOpacity>
       </View>
 
@@ -248,9 +250,9 @@ export default function DashboardScreen() {
 
       {/* Métricas rápidas */}
       <View style={styles(theme).statsRow}>
-        <Stat label="Pendentes" value={tasks.filter((t) => !t.done).length} theme={theme} />
-        <Stat label="Concluídas" value={tasks.filter((t) => t.done).length} theme={theme} />
-        <Stat label="Total" value={tasks.length} theme={theme} />
+        <Stat label={t("pending", "Pendentes")} value={tasks.filter((t) => !t.done).length} theme={theme} />
+        <Stat label={t("done", "Concluídas")} value={tasks.filter((t) => t.done).length} theme={theme} />
+        <Stat label={t("total", "Total")} value={tasks.length} theme={theme} />
       </View>
 
       {/* Lista em tempo real */}
@@ -265,7 +267,7 @@ export default function DashboardScreen() {
         ListEmptyComponent={
           <View style={styles(theme).emptyBox}>
             <Ionicons name="list-outline" size={22} color={theme.text + "66"} />
-            <Text style={styles(theme).emptyText}>Sem tarefas ainda. Adicione a primeira!</Text>
+            <Text style={styles(theme).emptyText}>{t("noTasksYet", "Sem tarefas ainda. Adicione a primeira!")}</Text>
           </View>
         }
       />

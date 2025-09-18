@@ -1,11 +1,23 @@
 {
-    "welcome":"Welcome to the app",
-    "logout":"Log out",
-    "deleteAccount":"Delete Account",
-    "confirmDelete":"Are you sure you want to delete yout account?",
-    "cancel":"Cancel",
-    "delete":"Delete",
-    "login":"Login",
-    "password":"Password"
+    "welcome": "Welcome to the app",
+    "logout": "Log out",
+    "deleteAccount": "Delete Account",
+    "confirmDelete": "Are you sure you want to delete your account?",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "login": "Login",
+    "password": "Password",
+
+    "myTasks": "My Tasks",
+    "loadingInspiration": "Loading inspiration…",
+    "markAsPending": "Mark as pending",
+    "markAsDone": "Mark as done",
+    "whatToDo": "What needs to be done?",
+    "date": "Date",
+    "add": "Add",
+    "pending": "Pending",
+    "done": "Done",
+    "total": "Total",
+    "noTasksYet": "No tasks yet. Add the first one!"
 }
 

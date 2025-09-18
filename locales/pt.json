@@ -1,10 +1,22 @@
 {
-    "welcome":"Seja bem-vindo à aplicação",
-    "logout":"Sair da conta",
-    "deleteAccount":"Excluir Conta",
-    "confirmDelete":"Tem certeza que deseja excluir a conta?",
-    "cancel":"Cancelar",
-    "delete":"Excluir",
-    "login":"Realizar Login",
-    "password":"Senha"
+    "welcome": "Seja bem-vindo à aplicação",
+    "logout": "Sair da conta",
+    "deleteAccount": "Excluir Conta",
+    "confirmDelete": "Tem certeza que deseja excluir a conta?",
+    "cancel": "Cancelar",
+    "delete": "Excluir",
+    "login": "Realizar Login",
+    "password": "Senha",
+
+    "myTasks": "Minhas Tarefas",
+    "loadingInspiration": "Carregando inspiração…",
+    "markAsPending": "Marcar como pendente",
+    "markAsDone": "Marcar como concluída",
+    "whatToDo": "O que precisa fazer?",
+    "date": "Data",
+    "add": "Adicionar",
+    "pending": "Pendentes",
+    "done": "Concluídas",
+    "total": "Total",
+    "noTasksYet": "Sem tarefas ainda. Adicione a primeira!"
 }

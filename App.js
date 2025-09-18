@@ -1,37 +1,64 @@
 // App.js
+import "./services/i18n"; // 👈 Corrigido
 import React, { useEffect, useState, useContext } from "react";
 import { NavigationContainer } from "@react-navigation/native";
-import { createDrawerNavigator, DrawerContentScrollView, DrawerItemList } from "@react-navigation/drawer";
+import {
+  createDrawerNavigator,
+  DrawerContentScrollView,
+  DrawerItemList,
+} from "@react-navigation/drawer";
 import { createStackNavigator } from "@react-navigation/stack";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { signOut } from "firebase/auth";
-import { auth } from "./screens/../services/firebaseConfig";
+import { auth } from "./services/firebaseConfig";
 
 import LoginScreen from "./screens/LoginScreen";
 import RegisterScreen from "./screens/RegisterScreen";
 import DashboardScreen from "./screens/DashboardScreen";
 
 import { ThemeProvider, ThemeContext } from "./contexts/ThemeContext";
-import { View, Text, TouchableOpacity, StyleSheet, Switch, Image } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Switch,
+  Image,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 // 👇 ADD: TanStack Query
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-const queryClient = new QueryClient();
+import { useTranslation } from "react-i18next"; // 👈 Ajustado
+import i18n from "./services/i18n"; // 👈 Ajustado
 
+const queryClient = new QueryClient();
 const Drawer = createDrawerNavigator();
 const Stack = createStackNavigator();
 
 /** ========= Drawer Custom ========= */
+
 function CustomDrawerContent(props) {
-  const { usuario, onLogout, toggleTheme, theme } = props;
-  const isDark = (theme?.background ?? "#000") !== "#fff";
+  const { usuario, onLogout } = props;
+  const { theme, toggleTheme, themeName } = useContext(ThemeContext);
+  const isDark = themeName === "dark";
+  const { t } = useTranslation();
+  const [lang, setLang] = React.useState(i18n.language);
+
+  const toggleLang = () => {
+    const newLang = lang === "pt" ? "en" : "pt";
+    i18n.changeLanguage(newLang);
+    setLang(newLang);
+  };
 
   return (
     <DrawerContentScrollView
       {...props}
-      contentContainerStyle={[styles.drawerContainer, { backgroundColor: theme.background }]}
+      contentContainerStyle={[
+        styles.drawerContainer,
+        { backgroundColor: theme.background },
+      ]}
     >
       {/* Cabeçalho com avatar e nome */}
       <View style={[styles.header, { backgroundColor: theme.inputBackground }]}>
@@ -39,7 +66,9 @@ function CustomDrawerContent(props) {
           source={{
             uri:
               "https://ui-avatars.com/api/?name=" +
-              encodeURIComponent(usuario?.displayName || usuario?.email || "U") +
+              encodeURIComponent(
+                usuario?.displayName || usuario?.email || "U"
+              ) +
               "&background=111111&color=B6FF00",
           }}
           style={styles.avatar}
@@ -48,7 +77,9 @@ function CustomDrawerContent(props) {
           <Text style={[styles.headerTitle, { color: theme.text }]}>
             {usuario?.displayName || "Bem-vindo!"}
           </Text>
-          <Text style={[styles.headerSubtitle, { color: theme.text }]}>{usuario?.email}</Text>
+          <Text style={[styles.headerSubtitle, { color: theme.text }]}>
+            {usuario?.email}
+          </Text>
         </View>
       </View>
 
@@ -67,19 +98,46 @@ function CustomDrawerContent(props) {
         >
           <View style={styles.rowLeft}>
             <Ionicons
-              name={isDark ? "moon" : "sunny"}
+              name={isDark ? "moon" : "sunny"} // 🌙 ou ☀️
               size={22}
               color={theme.primary}
               style={{ marginRight: 10 }}
             />
             <Text style={[styles.rowText, { color: theme.text }]}>
-              {isDark ? "Tema escuro" : "Tema claro"}
+              {isDark
+                ? t("darkMode", "Tema Escuro")
+                : t("lightMode", "Tema Claro")}
             </Text>
           </View>
           <Switch
             value={isDark}
             onValueChange={toggleTheme}
             thumbColor={isDark ? theme.primary : "#e5e5e5"}
+            trackColor={{ false: "#9e9e9e", true: "#3d3d3d" }}
+          />
+        </TouchableOpacity>
+
+        {/* Alternar idioma */}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={toggleLang}
+          style={[styles.rowButton, { backgroundColor: theme.inputBackground }]}
+        >
+          <View style={styles.rowLeft}>
+            <Ionicons
+              name={lang === "pt" ? "language" : "language-outline"}
+              size={22}
+              color={theme.primary}
+              style={{ marginRight: 10 }}
+            />
+            <Text style={[styles.rowText, { color: theme.text }]}>
+              {lang === "pt" ? "Português" : "English"}
+            </Text>
+          </View>
+          <Switch
+            value={lang === "en"}
+            onValueChange={toggleLang}
+            thumbColor={lang === "en" ? theme.primary : "#e5e5e5"}
             trackColor={{ false: "#9e9e9e", true: "#3d3d3d" }}
           />
         </TouchableOpacity>
@@ -97,7 +155,9 @@ function CustomDrawerContent(props) {
               color="#F44336"
               style={{ marginRight: 10 }}
             />
-            <Text style={[styles.rowText, { color: theme.text }]}>Sair</Text>
+            <Text style={[styles.rowText, { color: theme.text }]}>
+              {t("logout", "Sair")}
+            </Text>
           </View>
           <Ionicons name="chevron-forward" size={18} color={theme.text} />
         </TouchableOpacity>
@@ -150,10 +210,14 @@ function AuthStack({ handleLoginSuccess }) {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Login">
-        {(props) => <LoginScreen {...props} onLoginSuccess={handleLoginSuccess} />}
+        {(props) => (
+          <LoginScreen {...props} onLoginSuccess={handleLoginSuccess} />
+        )}
       </Stack.Screen>
       <Stack.Screen name="Register">
-        {(props) => <RegisterScreen {...props} onRegisterSuccess={handleLoginSuccess} />}
+        {(props) => (
+          <RegisterScreen {...props} onRegisterSuccess={handleLoginSuccess} />
+        )}
       </Stack.Screen>
     </Stack.Navigator>
   );
@@ -201,7 +265,7 @@ export default function App() {
 
   return (
     <ThemeProvider>
-      <QueryClientProvider client={queryClient}> {/* 👈 ENVOLVE O APP */}
+      <QueryClientProvider client={queryClient}>
         <NavigationContainer>
           {usuario ? (
             <AppDrawer usuario={usuario} onLogout={handleLogout} />
